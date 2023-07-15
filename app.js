@@ -258,7 +258,107 @@ https://github.com/sayar/RedisMVA/blob/master/module6_redis_pubsub/README.md
 
 
 
-                  
+# kafka Node client
+
+* npm install kafka-node –save*
+      
+https://www.educba.com/kafka-node/
+
+                        
+                            const express = require('express')
+                            const socketio = require('socket.io')
+                            const { createClient } = require('redis')
+                            const { createAdapter } = require('@socket.io/redis-adapter')
+                            const kafka = require('kafka-node')
+                            const config = require('./config.json')
+                            const actionLogsConfig = config.actionLogs;
+                            const app = express();
+                        
+                        
+                            const server = app.listen(1337, () => {
+                                console.log("server running on port 1337")
+                            })
+                        
+                            const io = socketio(server);
+                        
+                            io.on('connection',(socket) =>{
+                                console.log('New Connection');
+                        
+                                    socket.on("newConnection", function(id, room){
+                        
+                                        socket.emit('notification',"Thanks for connecting!!!")
+                        
+                                        console.log(id, room);
+                        
+                                        if(room == 'ActionLogRoom'){
+                                            console.log("=========================")
+                                        socket.join('ActionLogRoom');    
+                                        }
+                                    
+                        
+                                        try{
+                        
+                                            
+                                            const client = new kafka.KafkaClient(actionLogsConfig.kafka.bootstrapServer);
+                                            let consumer = new kafka.Consumer(
+                                                client,
+                                                [{topic: 'action.logs'}],
+                                                {
+                                                    autoCommit: true,
+                                                    fetchMaxWaitMs: 1000,
+                                                    fetchMaxBytes: 1024*1024,
+                                                    encoding: 'utf8',
+                                                    fromOffset:false
+                                                }
+                                            );
+                                       
+                        
+                                        consumer.on('message', async function(message){
+                                            console.log('Kafka Message Recieved', message.value);
+                                            io.to("ActionLogRoom").emit('notification',message.value);
+                                        })
+                        
+                                        consumer.on('error',function(err){
+                                            console.log('error', err)
+                                        })
+                        
+                                        }catch(e){
+                                            console.log(e);
+                                        }
+                        
+                                        
+                                    
+                                    })
+                        
+                            
+                            })
+
+
+
+# config.json
+
+            
+               "actionLogs": {
+                  "kafka": {
+                    "bootstrapServer": "localhost:9092",
+                    "topics": [
+                      {
+                        "topic": "action.logs"
+                      }
+                    ],
+                    "options": {
+                      "kafkaHost": "localhost:9092",
+                      "groupId": "actionLogs",
+                      "commitOffsetsOnFirstJoin": true,
+                      "protocol": ["roundrobin"],
+                      "autoCommit": true,
+                      "autoCommitIntervalMs": 100,
+                      "fetchMaxWaitMs": 1000,
+                      "fetchMaxBytes": 1048576
+                    }
+                  }
+                }
+              
                   
 
                   
